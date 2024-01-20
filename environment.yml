@@ -1,0 +1,23 @@
+name: tssl
+
+dependencies:
+        - python=3.8
+        - numpy==1.21.5
+        - pandas==1.4.1
+        - scipy
+        - matplotlib
+        - pydantic
+        - pytest
+        - pytest-cov
+        - pip
+        - pip:
+                - tensorflow==2.8.0
+                - gpflow==2.4.0
+                - tensorflow-probability==0.16.0
+                - scikit-learn
+                - gpflux==0.3.0
+                - torch==1.12.1
+                - gpytorch==1.7.0
+                - PyYAML
+                - openpyxl==3.0.10
+                - disjoint-set==0.7.4
