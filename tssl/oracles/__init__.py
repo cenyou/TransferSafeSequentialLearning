@@ -19,8 +19,11 @@ from .branin_hoo import BraninHoo
 from .eggholder import Eggholder
 from .flexible_oracle import Flexible1DOracle, Flexible2DOracle, FlexibleOracle
 from .gp_oracle_from_data import GPOracleFromData
+from .hartmann3 import Hartmann3
+from .hartmann6 import Hartmann6
 from .mogp_oracle_1d import MOGP1DOracle
 from .mogp_oracle_2d import MOGP2DOracle
+from .normalize_decorator import OracleNormalizer
 
 __all__=[
     "BaseOracle",
@@ -35,6 +38,9 @@ __all__=[
     "Flexible2DOracle",
     "FlexibleOracle",
     "GPOracleFromData",
+    "Hartmann3",
+    "Hartmann6",
     "MOGP1DOracle",
-    "MOGP2DOracle"
+    "MOGP2DOracle",
+    "OracleNormalizer",
 ]

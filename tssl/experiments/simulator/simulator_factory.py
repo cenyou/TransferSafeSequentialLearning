@@ -24,10 +24,13 @@ import glob
 from tssl.configs.experiment.simulator_configs.base_simulator_config import BaseSimulatorConfig
 from tssl.configs.experiment.simulator_configs.single_task_1d_illustrate_config import SingleTaskIllustrateConfig
 from tssl.configs.experiment.simulator_configs.single_task_branin_config import SingleTaskBraninConfig
+from tssl.configs.experiment.simulator_configs.single_task_hartmann3_config import SingleTaskHartmann3Config
 from tssl.configs.experiment.simulator_configs.single_task_mogp1dz_config import SingleTaskMOGP1DzBaseConfig
 from tssl.configs.experiment.simulator_configs.single_task_mogp2dz_config import SingleTaskMOGP2DzBaseConfig
 from tssl.configs.experiment.simulator_configs.single_task_engine_interpolated_config import SingleTaskEngineInterpolatedBaseConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_branin_config import TransferTaskBraninBaseConfig
+from tssl.configs.experiment.simulator_configs.transfer_task_multi_sources_branin_config import TransferTaskMultiSourcesBraninBaseConfig
+from tssl.configs.experiment.simulator_configs.transfer_task_hartmann3_config import TransferTaskHartmann3BaseConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_1d_illustrate_config import TransferTaskIllustrateConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_mogp1dz_config import TransferTaskMOGP1DzBaseConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_mogp2dz_config import TransferTaskMOGP2DzBaseConfig
@@ -37,7 +40,9 @@ from tssl.oracles import (
     MOGP1DOracle,
     MOGP2DOracle,
     BraninHoo,
-    Flexible1DOracle, Flexible2DOracle, FlexibleOracle
+    Flexible1DOracle, Flexible2DOracle, FlexibleOracle,
+    Hartmann3,
+    OracleNormalizer
 )
 
 from tssl.oracles.flexible_example_functions import (
@@ -48,7 +53,7 @@ from tssl.oracles.flexible_example_functions import (
 from tssl.pools import (
     BasePool, BasePoolWithSafety,
     PoolFromOracle, PoolWithSafetyFromOracle,
-    TransferPoolFromPools,
+    TransferPoolFromPools, MultitaskPoolFromPools,
     EnginePool, EngineCorrelatedPool
 )
 
@@ -82,6 +87,38 @@ class OracleLoader:
                     normalize_coeff = np.loadtxt( os.path.join(data_path, otl, 'normalize.txt') )
                     mean, scale = normalize_coeff
                     oracle = BraninHoo(observation_noise=observation_noise, constants=constants, normalize_output=True, normalize_mean=mean, normalize_scale=scale) # Pearson correlation: ~0.75
+                except:
+                    raise ValueError('oracle files not found')
+            return oracle
+        elif otl.startswith('multi_sources_branin'):
+            oracle_list = []
+            for p in glob.glob(os.path.join(data_path, otl, 'constants_*.txt')):
+                source_idx = int( p.split('constants_')[-1].split('.txt')[0] )
+                constants = np.loadtxt( p )
+                normalize_coeff = np.loadtxt( os.path.join(data_path, otl, f'normalize_{source_idx}.txt') )
+                mean, scale = normalize_coeff
+                oracle = OracleNormalizer(
+                    BraninHoo(observation_noise=observation_noise, constants=constants)
+                )
+                oracle.set_normalization_manually(mean, scale)
+                oracle_list.append(oracle)
+            return oracle_list
+        elif otl.startswith('hartmann3'):
+            if otl == 'hartmann3':
+                oracle = OracleNormalizer(
+                    Hartmann3(observation_noise=observation_noise)
+                )
+                oracle.set_normalization_manually(-0.9266432501735707, 0.9351442960268146)
+                
+            else:
+                try:
+                    constants = np.loadtxt( os.path.join(data_path, otl, 'constants.txt') )
+                    normalize_coeff = np.loadtxt( os.path.join(data_path, otl, 'normalize.txt') )
+                    mean, scale = normalize_coeff
+                    oracle = OracleNormalizer(
+                        Hartmann3(observation_noise=observation_noise, constants=constants)
+                    )
+                    oracle.set_normalization_manually(mean, scale)
                 except:
                     raise ValueError('oracle files not found')
             return oracle
@@ -162,6 +199,52 @@ class SimulatorFactory:
         elif isinstance(simulator_config, TransferTaskBraninBaseConfig):
             oracle_s = OracleLoader.return_oracle(oracle_type = simulator_config.oracle_type.lower(), observation_noise = simulator_config.observation_noise, data_path = simulator_config.data_path)
             oracle_t = OracleLoader.return_oracle(oracle_type = 'branin', observation_noise = simulator_config.observation_noise, data_path = simulator_config.data_path)
+
+            if not simulator_config.additional_safety:
+                pool_s = PoolFromOracle(oracle_s, seed = simulator_config.seed, set_seed=True)
+                pool_t = PoolFromOracle(oracle_t, seed = simulator_config.seed, set_seed=True)
+            else:
+                safety_oracle_s = deepcopy(oracle_s)
+                safety_oracle_t = deepcopy(oracle_t)
+                pool_s = PoolWithSafetyFromOracle(oracle_s, safety_oracle_s, seed = simulator_config.seed, set_seed=True)
+                pool_t = PoolWithSafetyFromOracle(oracle_t, safety_oracle_t, seed = simulator_config.seed, set_seed=False)
+
+            pool_s.discretize_random(simulator_config.n_pool)
+            pool_t.set_data(pool_s.possible_queries())
+
+            return TransferPoolFromPools(pool_s, pool_t)
+
+        elif isinstance(simulator_config, TransferTaskMultiSourcesBraninBaseConfig):
+            dim_s = simulator_config.dim_s
+            all_source_oracle_list = OracleLoader.return_oracle(oracle_type = simulator_config.oracle_type.lower(), observation_noise = simulator_config.observation_noise, data_path = simulator_config.data_path)
+            source_oracle_list = all_source_oracle_list[:dim_s]
+            oracle_t = OracleLoader.return_oracle(oracle_type = 'branin', observation_noise = simulator_config.observation_noise, data_path = simulator_config.data_path)
+
+            assert not simulator_config.additional_safety
+            pool_list = [PoolFromOracle(oracle, seed = simulator_config.seed, set_seed=True) for oracle in source_oracle_list]
+            pool_list.append(PoolFromOracle(oracle_t, seed = simulator_config.seed, set_seed=True))
+            pool_list[-1].discretize_random(simulator_config.n_pool)
+            xx = pool_list[-1].possible_queries()
+            for p in pool_list[:-1]:
+                p.set_data(xx)
+            return MultitaskPoolFromPools(pool_list)
+
+        elif isinstance(simulator_config, SingleTaskHartmann3Config):
+            oracle = OracleLoader.return_oracle(oracle_type = 'hartmann3', observation_noise = simulator_config.observation_noise, data_path = simulator_config.data_path)
+
+            if not simulator_config.additional_safety:
+                pool = PoolFromOracle(oracle, seed = simulator_config.seed, set_seed=True)
+            else:
+                safety_oracle = deepcopy(oracle)
+                pool = PoolWithSafetyFromOracle(oracle, safety_oracle, seed = simulator_config.seed, set_seed=True)
+
+            pool.discretize_random(simulator_config.n_pool)
+            
+            return pool
+
+        elif isinstance(simulator_config, TransferTaskHartmann3BaseConfig):
+            oracle_s = OracleLoader.return_oracle(oracle_type = simulator_config.oracle_type.lower(), observation_noise = simulator_config.observation_noise, data_path = simulator_config.data_path)
+            oracle_t = OracleLoader.return_oracle(oracle_type = 'hartmann3', observation_noise = simulator_config.observation_noise, data_path = simulator_config.data_path)
 
             if not simulator_config.additional_safety:
                 pool_s = PoolFromOracle(oracle_s, seed = simulator_config.seed, set_seed=True)

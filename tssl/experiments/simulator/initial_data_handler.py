@@ -26,10 +26,16 @@ class InitialDataHandler:
         oracle_type: str="mogp1d0"
     ):
         otl = oracle_type.lower()
-        if otl.startswith('branin'):
+        if otl.startswith('branin') or otl.startswith('multi_sources_branin'):
             folder = os.path.join(data_path, otl)
             
             x = np.loadtxt( os.path.join(folder, 'init_X.txt') ).reshape([-1,2])
+            y = np.loadtxt( os.path.join(folder, 'init_Y.txt') ).reshape([-1,1])
+            return x[:n], y[:n]
+        elif otl.startswith('hartmann3'):
+            folder = os.path.join(data_path, otl)
+                
+            x = np.loadtxt( os.path.join(folder, 'init_X.txt') ).reshape([-1,3])
             y = np.loadtxt( os.path.join(folder, 'init_Y.txt') ).reshape([-1,1])
             return x[:n], y[:n]
         elif otl.startswith('mogp1dz'):

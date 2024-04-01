@@ -39,6 +39,31 @@ The kernel is similar to this one:
 Matthias Poloczek, Jialei Wang and Peter Frazier, NeurIPS 2017, Multi-Information Source Optimization
 
 """
+class FilterKernel(gpflow.kernels.Coregion):
+    
+    def __init__(
+        self,
+        output_dim: int,
+        start_dim: int,
+        *,
+        active_dims = None,
+        name = None,
+    ):
+        # this kernel should be [1(i>=start_dim, j>=start_dim)]_ij
+        super(gpflow.kernels.Coregion, self).__init__(active_dims=active_dims, name=name)
+
+        self.output_dim = output_dim
+        self.start_dim = start_dim
+        B = np.zeros([output_dim, output_dim])
+        B[start_dim-1:, start_dim-1:] = 1
+        self.B = f64(B)
+
+    def output_covariance(self):
+        return self.B
+
+    def output_variance(self) -> tf.Tensor:
+        return tf.linalg.diag_part(self.B)
+
 class MIAdditiveKernel(BaseTransferKernel):
     """
     X: [N, D+1], the last column is binary
@@ -46,8 +71,8 @@ class MIAdditiveKernel(BaseTransferKernel):
     """
     def __init__(
         self,
-        variance_list: List,
-        lengthscale_list: List,
+        base_variance: float,
+        base_lengthscale: Union[float, Sequence[float]],
         input_dimension: int,
         output_dimension: int,
         add_prior: bool,
@@ -60,66 +85,52 @@ class MIAdditiveKernel(BaseTransferKernel):
         **kwargs
     ):
         P = output_dimension
-        assert P == 2 # only support 1 source right now
-        assert len(variance_list) == P
-        assert len(lengthscale_list) == P
         super().__init__(input_dimension, P, active_on_single_dimension, active_dimension, name, **kwargs,)
-        
-        var_source = variance_list[0]
-        var_error = variance_list[1]
 
-        leng_source = lengthscale_list[0]
-        leng_error = lengthscale_list[1]
-
-        if hasattr(leng_source, '__len__'):
-            if len(leng_source) == 1:
-                lg = f64(np.repeat(leng_source[0], self.num_active_dimensions))
+        var = f64(base_variance)
+        if hasattr(base_lengthscale, '__len__'):
+            if len(base_lengthscale) == 1:
+                lg = f64(np.repeat(base_lengthscale[0], self.num_active_dimensions))
             else:
-                assert len(leng_source) == self.num_active_dimensions
-                lg = f64(leng_source)
+                assert len(base_lengthscale) == self.num_active_dimensions
+                lg = f64(base_lengthscale)
         else:
-            lg = f64(np.repeat(leng_source, self.num_active_dimensions))
+            lg = f64(np.repeat(base_lengthscale, self.num_active_dimensions))
 
         k_object = self.pick_kernel_object(latent_kernel)
         
         k_source = k_object(
-            variance=f64(var_source),
+            variance=var,
             lengthscales=lg,
             active_dims=tf.range(self.num_active_dimensions),
             name='kernel_source'
         )
         
-        if hasattr(leng_error, '__len__'):
-            if len(leng_error) == 1:
-                lg = f64(np.repeat(leng_error[0], self.num_active_dimensions))
-            else:
-                assert len(leng_error) == self.num_active_dimensions
-                lg = f64(leng_error)
-        else:
-            lg = f64(np.repeat(leng_error, self.num_active_dimensions))
+        for p in range(1, P):
+            k_p = k_object(
+                variance=var,
+                lengthscales=lg,
+                active_dims=tf.range(self.num_active_dimensions),
+                name='kernel_error'
+            )
 
-        k_error = k_object(
-            variance=f64(var_error),
-            lengthscales=lg,
-            active_dims=tf.range(self.num_active_dimensions),
-            name='kernel_error'
-        )
-
-        dt = gpflow.kernels.Linear(active_dims=[self.num_active_dimensions])
-        set_trainable(dt.variance, False)
-
-        self.kernel = k_source + dt * k_error
+            dt = FilterKernel(P, p+1, active_dims=[self.num_active_dimensions])
+            k_source = k_source + dt * k_p
+        self.kernel = k_source
         
         if add_prior:
             self.assign_prior(lengthscale_prior_parameters, variance_prior_parameters)
     
     @property
     def num_latent_gps(self):
-        return 1
+        return self.output_dimension - 1
     
     @property
     def latent_kernels(self):
-        return [self.kernel.kernels[0], self.kernel.kernels[1].kernels[1]]
+        out_list = [self.kernel.kernels[0]]
+        for p in range(1, self.output_dimension + 1):
+            out_list.append(self.kernel.kernels[p].kernels[1])
+        return out_list
     
     def assign_prior(self, lengthscale_prior_parameters, variance_prior_parameters):
         a_lengthscale, b_lengthscale = lengthscale_prior_parameters
@@ -147,10 +158,18 @@ class MIAdditiveKernel(BaseTransferKernel):
 
     def set_target_parameters_trainable(self, target_trainable: bool):
         P = self.output_dimension
-        set_trainable(self.kernel.kernels[1].kernels[1], target_trainable)
+        set_trainable(self.kernel.kernels[P-1].kernels[1], target_trainable)
 
 if __name__ == "__main__":
-    k = MIAdditiveKernel([1.0, 1.0], [1,1], 2, 2, False, None, None, LatentKernel.MATERN52, False, None, 'name_hello')
+    D = 2
+    P = 3
+    k = MIAdditiveKernel(1.0, 1.0, D, P, False, None, None, LatentKernel.MATERN52, False, None, 'name_hello')
+    X = np.hstack((
+        np.random.uniform(size=(P, D)),
+        np.arange(P).reshape([P,1])
+    ))
+
+    print(k(X))
     print_summary(k)
     k.set_source_parameters_trainable(False)
     print_summary(k)

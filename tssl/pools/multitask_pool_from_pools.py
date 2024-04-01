@@ -18,47 +18,45 @@ from typing import Union, Sequence
 import numpy as np
 from scipy import stats
 from tssl.enums.data_structure_enums import OutputType
-from tssl.enums.multi_task_enums import TransferLearningTaskMode as TaskMode
 from tssl.pools.base_pool import BasePool
 
-class TransferPoolFromPools(BasePool):
+class MultitaskPoolFromPools(BasePool):
     """
-    This pool take one source_pool and one target_pool.
-    It won't modify the data in each pool, but whenever data are retrieved or processed,
+    This pool take multiple pools.
+    It won't modify the data in each pool, but whenever data are retrieve or processed,
         it will decorate them in the flattened multi_output way (i.e. X: [N, D+1] array, with the last column being output indices)
     """
     def __init__(
         self,
-        source_pool,
-        target_pool
-        ):
+        pool_list: Sequence[BasePool],
+    ):
         super().__init__()
         self.output_type = OutputType.MULTI_OUTPUT_FLATTENED
 
-        self.source_pool = source_pool
-        self.target_pool = target_pool
-        
-        self.task_mode = TaskMode.SOURCE
-        self.source_dimension = self.source_pool.get_dimension()
-        self.target_dimension = self.target_pool.get_dimension()
-        
-        #self.source_pool.output_type = OutputType.MULTI_OUTPUT_FLATTENED
-        #self.target_pool.output_type = OutputType.MULTI_OUTPUT_FLATTENED
+        self.set_pool_list(pool_list)
+        self.set_task_mode(self.output_dimension - 1) # default to the last pool
+
+    def set_pool_list(self, pool_list: Sequence[BasePool]):
+        self.pool_list = pool_list
+        assert all([pool.output_type == OutputType.SINGLE_OUTPUT for pool in self.pool_list])
 
     def set_query_non_exist(self, query_non_exist_points:bool):
         super().set_query_non_exist(query_non_exist_points)
-        self.source_pool.set_query_non_exist(query_non_exist_points)
-        self.source_pool.set_query_non_exist(query_non_exist_points)
-    
-    def set_task_mode(self, learning_target: bool = False):
-        if learning_target:
-            self.task_mode = TaskMode.TARGET
-        else:
-            self.task_mode = TaskMode.SOURCE
-    
+        for pool in self.pool_list:
+            pool.set_query_non_exist(query_non_exist_points)
+
+    def set_task_mode(self, pool_index: int):
+        assert pool_index < len(self.pool_list)
+        assert pool_index >= 0
+        self.task_mode = pool_index
+
+    @property
+    def output_dimension(self):
+        return len(self.pool_list)
+
     @property
     def task_index(self):
-        return int(self.task_mode.value)
+        return int(self.task_mode)
 
     def data_decorator(self, x, D:int, p:int):
         r"""
@@ -85,18 +83,10 @@ class TransferPoolFromPools(BasePool):
         YZ_list = data[1:]
         return (X, *YZ_list)
     
-    def _get_pool_d_p(self, task_mode):
-        
-        if task_mode == TaskMode.SOURCE:
-            pool = self.source_pool
-            d = self.source_dimension
-            p = TaskMode.SOURCE.value
-        elif task_mode == TaskMode.TARGET:
-            pool = self.target_pool
-            d = self.target_dimension
-            p = TaskMode.TARGET.value
-        else:
-            return ValueError("Unknown task_mode")
+    def _get_pool_d_p(self, task_index: int):
+        pool = self.pool_list[task_index]
+        d = pool.get_dimension()
+        p = task_index
         return pool, d, p
     
     def get_max(self):
@@ -117,20 +107,18 @@ class TransferPoolFromPools(BasePool):
         else:
             raise NotImplementedError
 
-    def query(self, x, noisy=True):
+    def query(self, x, noisy: bool=True):
         pool, d, p = self._get_pool_d_p(self.task_mode)
         return pool.query(x[...,:d], noisy=noisy)
+
+    def batch_query(self, X, noisy: bool=True):
+        pool, d, p = self._get_pool_d_p(self.task_mode)
+        return pool.batch_query(X[...,:d], noisy=noisy)
 
     def get_grid_data(self, *args, **kwargs):
         pool, d, p = self._get_pool_d_p(self.task_mode)
         # output_tuple may be (X, Y) or (X, Y, Z)
         output_tuple = pool.get_grid_data(*args, **kwargs)
-        return self.data_tuple_decorator(output_tuple, d, p)
-    
-    def load_grid_data(self, *args, **kwargs):
-        pool, d, p = self._get_pool_d_p(self.task_mode)
-        # output_tuple may be (X, Y) or (X, Y, Z)
-        output_tuple = pool.load_grid_data(*args, **kwargs)
         return self.data_tuple_decorator(output_tuple, d, p)
     
     def get_data_from_idx(self, *args, **kwargs):
@@ -164,24 +152,16 @@ class TransferPoolFromPools(BasePool):
         return self.data_tuple_decorator(output_tuple, d, p)
 
     def get_dimension(self, *args, **kwargs):
-        if self.task_mode == TaskMode.SOURCE:
-            return self.source_dimension
-        elif self.task_mode == TaskMode.TARGET:
-            return self.target_dimension
-        else:
-            return ValueError("Unknown task_mode")
+        _, d, _ = self._get_pool_d_p(self.task_mode)
+        return d
 
     def get_variable_dimension(self, *args, **kwargs):
         pool, d, p = self._get_pool_d_p(self.task_mode)
         return pool.get_variable_dimension(*args, **kwargs)
 
     def set_replacement(self,with_replacement: bool):
-        if self.task_mode == TaskMode.SOURCE:
-            return self.source_pool.set_replacement(with_replacement=with_replacement)
-        elif self.task_mode == TaskMode.TARGET:
-            return self.target_pool.set_replacement(with_replacement=with_replacement)
-        else:
-            return ValueError("Unknown task_mode")
+        pool, d, p = self._get_pool_d_p(self.task_mode)
+        pool.set_replacement(with_replacement=with_replacement)
 
     def get_context_status(self, *args, **kwargs):
         pool, d, p = self._get_pool_d_p(self.task_mode)
@@ -197,41 +177,5 @@ class TransferPoolFromPools(BasePool):
 
     def possible_queries(self):
         return self.__x
-
-    def get_pearson_correlation(self, noisy:bool=False):
-        r"""
-        this is actually a bad method in general
-        only use this when source and target pools are from oracles
-        """
-        n = 5000
-        output_tuple = self.source_pool.get_random_data(n, noisy)
-        
-        X = output_tuple[0]
-        Ys = output_tuple[1]
-        Yt = np.empty_like(Ys)
-        if len(output_tuple) == 3:
-            Zs = output_tuple[2]
-            Zt = np.empty_like(Zs)
-        
-        replacement = self.target_pool._with_replacement
-        query_nonexist = self.target_pool._query_non_exist_points
-        self.target_pool.set_replacement(True)
-        self.target_pool.set_query_non_exist(True)
-        for i in range(n):
-            if len(output_tuple) == 2:
-                Yt[i,:] = self.target_pool.query(X[i,:], noisy)
-            elif len(output_tuple) == 3:
-                Yt[i,:], Zt[i,:] = self.target_pool.query(X[i,:], noisy)
-        self.target_pool.set_replacement(replacement)
-        self.target_pool.set_query_non_exist(query_nonexist)
-        
-        if len(output_tuple) == 2:
-            cr_y, _ = stats.pearsonr(Ys.reshape(-1), Yt.reshape(-1))
-            return cr_y
-        elif len(output_tuple) == 3:
-            cr_y, _ = stats.pearsonr(Ys.reshape(-1), Yt.reshape(-1))
-            cr_z, _ = stats.pearsonr(Zs.reshape(-1), Zt.reshape(-1))
-            return cr_y, cr_z
-            
             
 

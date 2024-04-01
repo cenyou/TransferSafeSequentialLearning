@@ -84,8 +84,8 @@ def test_coregionalizationPLkernel():
 
 def test_miakernel():
     kernel = MIAdditiveKernel(
-        variance_list = [1.0, 0.9],
-        lengthscale_list =  [0.8, 0.7],
+        base_variance = 1.0,
+        base_lengthscale =  0.8,
         input_dimension=D,
         output_dimension=P,
         add_prior=False,
@@ -98,7 +98,7 @@ def test_miakernel():
     )
     k_source = gpflow.kernels.Matern52(1.0, 0.8)
     output_filter = gpflow.kernels.Linear() 
-    k_difference = gpflow.kernels.Matern52(0.9, 0.7)
+    k_difference = gpflow.kernels.Matern52(1.0, 0.8)
     
     assert np.allclose( kernel(X1_flat, X2_flat), k_source(X1, X2) + output_filter(idx_col.astype(float), idx_col.astype(float))*k_difference(X1, X2) )
     assert np.allclose( kernel(X1_flat, full_cov=False), k_source(X1, full_cov=False) + output_filter(idx_col.astype(float), full_cov=False)*k_difference(X1, full_cov=False) )

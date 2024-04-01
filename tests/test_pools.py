@@ -21,6 +21,7 @@ from tssl.oracles.flexible_example_functions import f
 from tssl.oracles.branin_hoo import BraninHoo
 from tssl.data_sets.pytest_set import PytestSet, PytestMOSet
 from tssl.pools import PoolFromOracle, PoolWithSafetyFromOracle
+from tssl.pools import TransferPoolFromPools, MultitaskPoolFromPools
 from tssl.utils.utils import row_wise_compare, row_wise_unique
 
 def test_pool_from_oracle_basic():
@@ -148,4 +149,46 @@ def test_pool_with_safety_from_oracle_get_constrained_data():
     assert Z.min() >= -0.5
     assert Z.max() <= 0.6
 
+def test_transfer_pool():
+    ps = PoolFromOracle(BraninHoo(0.01))
+    pt = PoolFromOracle(BraninHoo(0.01))
+    ps.discretize_random(300)
+    pt.discretize_random(300)
+    pool = TransferPoolFromPools(ps, pt)
+    pool.set_task_mode(False)
+    pool.set_replacement(True)
+    x_pool = pool.possible_queries()
+    y = pool.query(x_pool[0], noisy=False)
+    assert pool.possible_queries().shape[0] == 300
+    pool.set_replacement(False)
+    x_pool = pool.possible_queries()
+    y = pool.query(x_pool[0], noisy=False)
+    assert pool.possible_queries().shape[0] == 299
+
+    pool.set_task_mode(True)
+    pool.set_replacement(True)
+    x_pool = pool.possible_queries()
+    y = pool.query(x_pool[0], noisy=False)
+    assert pool.possible_queries().shape[0] == 300
+    pool.set_replacement(False)
+    x_pool = pool.possible_queries()
+    y = pool.query(x_pool[0], noisy=False)
+    assert pool.possible_queries().shape[0] == 299
+
+def test_multitask_pool():
+    P = 4
+    pool_list = [PoolFromOracle(BraninHoo(0.01)) for _ in range(P)]
+    for p in pool_list:
+        p.discretize_random(300)
+    pool = MultitaskPoolFromPools(pool_list)
+    for i in range(P):
+        pool.set_task_mode(i)
+        pool.set_replacement(True)
+        x_pool = pool.possible_queries()
+        y = pool.query(x_pool[0], noisy=False)
+        assert pool.possible_queries().shape[0] == 300
+        pool.set_replacement(False)
+        x_pool = pool.possible_queries()
+        y = pool.query(x_pool[0], noisy=False)
+        assert pool.possible_queries().shape[0] == 299
 

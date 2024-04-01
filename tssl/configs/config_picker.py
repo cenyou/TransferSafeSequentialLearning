@@ -71,7 +71,14 @@ from tssl.configs.models.gp_model_for_engine2_config import (
 from tssl.configs.experiment.simulator_configs.base_simulator_config import BaseSimulatorConfig
 from tssl.configs.experiment.simulator_configs.single_task_1d_illustrate_config import SingleTaskIllustrateConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_1d_illustrate_config import TransferTaskIllustrateConfig
-from tssl.configs.experiment.simulator_configs.single_task_branin_config import SingleTaskBraninConfig
+from tssl.configs.experiment.simulator_configs.single_task_branin_config import (
+    SingleTaskBraninConfig,
+    SingleTaskBranin0Config,
+    SingleTaskBranin1Config,
+    SingleTaskBranin2Config,
+    SingleTaskBranin3Config,
+    SingleTaskBranin4Config,
+)
 from tssl.configs.experiment.simulator_configs.transfer_task_branin_config import (
     TransferTaskBraninBaseConfig,
     TransferTaskBranin0Config,
@@ -79,6 +86,25 @@ from tssl.configs.experiment.simulator_configs.transfer_task_branin_config impor
     TransferTaskBranin2Config,
     TransferTaskBranin3Config,
     TransferTaskBranin4Config,
+)
+from tssl.configs.experiment.simulator_configs.transfer_task_multi_sources_branin_config import (
+    TransferTaskMultiSourcesBraninBaseConfig,
+    TransferTaskMultiSourcesBranin0Config,
+    TransferTaskMultiSourcesBranin1Config,
+    TransferTaskMultiSourcesBranin2Config,
+    TransferTaskMultiSourcesBranin3Config,
+    TransferTaskMultiSourcesBranin4Config,
+)
+from tssl.configs.experiment.simulator_configs.single_task_hartmann3_config import (
+    SingleTaskHartmann3Config, SingleTaskHartmann3_0Config, SingleTaskHartmann3_1Config, SingleTaskHartmann3_2Config, SingleTaskHartmann3_3Config, SingleTaskHartmann3_4Config,
+)
+from tssl.configs.experiment.simulator_configs.transfer_task_hartmann3_config import (
+    TransferTaskHartmann3BaseConfig,
+    TransferTaskHartmann3_0Config,
+    TransferTaskHartmann3_1Config,
+    TransferTaskHartmann3_2Config,
+    TransferTaskHartmann3_3Config,
+    TransferTaskHartmann3_4Config,
 )
 from tssl.configs.experiment.simulator_configs.single_task_mogp1dz_config import (
     SingleTaskMOGP1DzBaseConfig,
@@ -196,8 +222,14 @@ class ConfigPicker:
             SingleTaskIllustrateConfig,
             TransferTaskIllustrateConfig,
             SingleTaskBraninConfig,
+            SingleTaskBranin0Config, SingleTaskBranin1Config, SingleTaskBranin2Config, SingleTaskBranin3Config, SingleTaskBranin4Config,
             TransferTaskBraninBaseConfig,
             TransferTaskBranin0Config, TransferTaskBranin1Config, TransferTaskBranin2Config, TransferTaskBranin3Config, TransferTaskBranin4Config,
+            TransferTaskMultiSourcesBranin0Config, TransferTaskMultiSourcesBranin1Config, TransferTaskMultiSourcesBranin2Config, TransferTaskMultiSourcesBranin3Config, TransferTaskMultiSourcesBranin4Config,
+            SingleTaskHartmann3Config,
+            SingleTaskHartmann3_0Config, SingleTaskHartmann3_1Config, SingleTaskHartmann3_2Config, SingleTaskHartmann3_3Config, SingleTaskHartmann3_4Config,
+            TransferTaskHartmann3BaseConfig,
+            TransferTaskHartmann3_0Config, TransferTaskHartmann3_1Config, TransferTaskHartmann3_2Config, TransferTaskHartmann3_3Config, TransferTaskHartmann3_4Config,
             SingleTaskMOGP1DzBaseConfig,
             SingleTaskMOGP1Dz0Config, SingleTaskMOGP1Dz1Config, SingleTaskMOGP1Dz2Config, SingleTaskMOGP1Dz3Config, SingleTaskMOGP1Dz4Config,
             SingleTaskMOGP1Dz5Config, SingleTaskMOGP1Dz6Config, SingleTaskMOGP1Dz7Config, SingleTaskMOGP1Dz8Config, SingleTaskMOGP1Dz9Config,

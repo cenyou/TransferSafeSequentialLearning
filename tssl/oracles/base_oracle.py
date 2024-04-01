@@ -101,6 +101,18 @@ class StandardOracle(BaseOracle, ContextSupport):
         X, Y = self.get_random_data(n, noisy=False)
         return max(Y)
 
+    def batch_query(self, X: np.ndarray, noisy: bool=True) -> np.ndarray:
+        """
+        Queries the oracle at location x and gets back the oracle value
+
+        Arguments:
+            X : np.array - np.arry with dimension (n,d) where n is the number of queries and d is the input dimension
+            noisy : bool - flag if noise should be added
+        Returns:
+            np.array - [n, ] array - values of oracle at location X
+        """
+        return np.array([self.query(X[..., i,:], noisy) for i in range(X.shape[-2])])
+
     def get_grid_data(self, n_per_dim: int, noisy: bool = True):
         X = create_grid(self.__a, self.__b, n_per_dim, self.get_variable_dimension())
         X = self._decorate_variable_with_context(X)

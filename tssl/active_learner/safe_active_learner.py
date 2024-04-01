@@ -52,6 +52,7 @@ class SafeActiveLearner:
         validation_type: ValidationType,
         query_noisy: bool=True,
         model_is_safety_model: bool=False,
+        run_ccl: bool=True,
         tolerance: Union[float, Sequence[float]]=0.01,
         save_results: bool=False,
         experiment_path: str=None
@@ -65,7 +66,7 @@ class SafeActiveLearner:
         self.kernel_scale = []
         self.kernel_lengthscales = []
         self.measure_safe_area = False
-        self.safe_area = SafetyAreaMeasure()
+        self.safe_area = SafetyAreaMeasure(run_ccl=run_ccl)
         """SafetyAreaMeasure compute the areas of predictive safe regions and true safe regions,
                 where each regions would be clustered."""
         self.query_noisy = query_noisy

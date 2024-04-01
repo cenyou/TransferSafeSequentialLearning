@@ -33,7 +33,9 @@ class SafetyAreaMeasure:
     3. compute true positive of the prediction:
         safety_area_measure.true_positive_lands(mask)
     """
-    def __init__(self):
+    def __init__(self, run_ccl: bool=True):
+        self.__run_ccl = run_ccl # run connected component labelling
+                                 # if False, we will consider all safe lands as one
         self.__safeland_area = 0
         self.__safeland_individual_area = [] # tuple (area of true land1, area of true land2, etc)
         self.__safeland_hit_area = []
@@ -100,7 +102,11 @@ class SafetyAreaMeasure:
         grid: [N, D] array
         mask: [N, 1] array
         """
-        num_lands, land_labels = self._label_safe_lands(grid, true_mask)
+        if self.__run_ccl:
+            num_lands, land_labels = self._label_safe_lands(grid, true_mask)
+        else:
+            num_lands = 1
+            land_labels = true_mask
         land_labels = land_labels.astype(float)
         areas = [np.sum(land_labels == label) / land_labels.shape[0] for label in range(1, num_lands+1)]
         
@@ -176,14 +182,10 @@ class SafetyAreaMeasure:
         
         """
         For individual safe lands:
+        not implemented
         The problem is in each iteration, we might have different number of predictive safe lands,
         so each tuple might turn out having different number of element.
         """
-        #num_lands, land_labels = self.__label_safe_lands(self.__grid, mask)
-        #land_labels[self.__true_land_labels.reshape(-1)>0] = 0
-        #areas = [np.sum(land_labels == label) / land_labels.shape[0] for label in range(1, num_lands+1)]
-        
-        #self.__safeland_individual_falsealarm_area.append(tuple(areas))
     
     def get_total_iter_num_false_positive(self):
         return len(self.__safeland_falsealarm_area)

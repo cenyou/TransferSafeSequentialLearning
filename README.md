@@ -40,10 +40,13 @@ We first generate the synthetic data, and then run experiments on the generated 
 python ./tssl/experiments/simulator/data_generator_safe_mogp.py --folder YOUR_DATA_PATH --dim 1
 python ./tssl/experiments/simulator/data_generator_safe_mogp.py --folder YOUR_DATA_PATH --dim 2
 python ./tssl/experiments/simulator/data_generator_safe_branin.py --folder YOUR_DATA_PATH
+python ./tssl/experiments/simulator/data_generator_safe_hartmann3.py --folder YOUR_DATA_PATH
+python ./tssl/experiments/simulator/data_generator_safe_multi_sources_branin.py --folder YOUR_DATA_PATH --num_sources 5
 ```
 
-Now GP1D, GP2D and Branin data are generated.
+Now GP1D, GP2D, Branin, Hartmann3 and multi sources Branin data are generated.
 
+With multi sources Branin, specify the max number of source tasks you want with `--num_sources`.
 ### Run SAL
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_al_from_simulator.py \
@@ -62,6 +65,8 @@ For **GP2D** data: use ` --simulator_config SingleTaskMOGP2Dz[0-19]Config`.
 
 For **Branin** data: use ` --simulator_config SingleTaskBranin[0-4]Config`.
 
+For **Hartmann3** data: use ` --simulator_config SingleTaskHartmann3_[0-4]Config`.
+
 ### Run EffTrans
 
 ```bash
@@ -75,11 +80,23 @@ python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py 
  `--experiment_idx` is the seed, we use [1-5].
 `--simulator_config` specifies the dataset.
 
-For **GP1D** data: use ` --simulator_config TransferTaskMOGP1Dz[0-19]Config`.
+For **GP1D** data: use ` --simulator_config TransferTaskMOGP1Dz[0-19]Config --n_data_s 100 --n_data_initial 10 --n_steps 50`.
 
-For **GP2D** data: use ` --simulator_config TransferTaskMOGP2Dz[0-19]Config`.
+For **GP2D** data: use ` --simulator_config TransferTaskMOGP2Dz[0-19]Config --n_data_s 250 --n_data_initial 20 --n_steps 100 --n_data_test 500`.
 
-For **Branin** data: use ` --simulator_config TransferTaskBranin[0-4]Config`.
+For **Branin** data: use ` --simulator_config TransferTaskBranin[0-4]Config --n_data_s 100 --n_data_initial 20 --n_steps 100 --n_data_test 500`.
+
+For **Hartmann3** data: use ` --simulator_config TransferTaskHartmann3_[0-4]Config --n_data_s 100 --n_data_initial 20 --n_steps 100 --n_data_test 500 --label_safeland False`.
+
+For **multi-sources-Branin**, run (we use `--dim_s`= 3 or 4, which is the number of source tasks)
+```
+python ./tssl/experiments/safe_learning/main_multi_sources_safe_transfer_al_from_simulator.py \
+ --experiment_data_dir YOUR_DATA_PATH \
+ --experiment_output_dir YOUR_RESULT_PATH \
+ --experiment_idx [1-5] \
+ --simulator_config TransferTaskMultiSourcesBranin[0-4]Config \
+ --kernel_config BasicMIAdditiveConfig --model_config BasicTransferGPModelConfig --acquisition_function_config BasicSafePredEntropyAllConfig --label_safeland True --safe_lower_source 0 --safe_upper_source inf --safe_lower 0 --safe_upper inf --n_data_s_per_dim 20 --dim_s 3 --n_data_initial 20 --n_steps 100 --n_data_test 500 --query_noisy True
+```
 
 ### Run FullTransHGP:
 replace `--model_config BasicTransferGPModelConfig` by `--model_config BasicSOMOGPModelConfig`, the remaining arguments are the same as `EffTrans`

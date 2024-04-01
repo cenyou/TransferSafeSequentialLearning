@@ -100,9 +100,10 @@ def experiment(args):
         data_init = pool.get_data_from_idx(simulator_config.target_data_idx, noisy=True)
 
     data_test = pool.get_random_constrained_data(n_data_test, noisy=True, constraint_lower=safe_lower, constraint_upper=safe_upper)
-
     if args.label_safeland:
         data_grid = pool.get_grid_data(40, noisy=False)
+    else:
+        data_grid = pool.get_random_data(n_pool, noisy=False)
 
     # create kernels and models
     kernel_config = ConfigPicker.pick_kernel_config(args.kernel_config)(
@@ -141,6 +142,7 @@ def experiment(args):
         acq_func, val_type,
         query_noisy=args.query_noisy,
         model_is_safety_model= not simulator_config.additional_safety,
+        run_ccl=args.label_safeland,
         save_results=save_results,
         experiment_path=exp_path
         )
@@ -150,8 +152,7 @@ def experiment(args):
     # perform the main experiment
     learner.set_train_data(*data_init)
     learner.set_test_data(*data_test)
-    if args.label_safeland:
-        learner.initialize_safe_area_measure(*data_grid)
+    learner.initialize_safe_area_measure(*data_grid)
     
     regret, _, _ = learner.learn(n_steps)
 

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from typing import Tuple, List
+from typing import Tuple, List, Sequence, Union
 from tssl.configs.kernels.base_kernel_config import BaseKernelConfig
 from tssl.kernels.multi_output_kernels.latent_kernel_enum import LatentKernel
 from tssl.configs.base_parameters import (
@@ -23,8 +23,8 @@ from tssl.configs.base_parameters import (
 )
 
 class BasicMIAdditiveConfig(BaseKernelConfig):
-    variance_list: List = [BASE_KERNEL_VARIANCE, 0.1 * BASE_KERNEL_VARIANCE]
-    lengthscale_list: List = [BASE_KERNEL_LENGTHSCALE, BASE_KERNEL_LENGTHSCALE]
+    base_variance: float = BASE_KERNEL_VARIANCE
+    base_lengthscale: Union[float, Sequence[float]] = BASE_KERNEL_LENGTHSCALE
     input_dimension: int
     output_dimension: int = 2
     add_prior: bool=False
