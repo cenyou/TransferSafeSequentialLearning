@@ -1,7 +1,7 @@
 # Transfer Safe Sequential Learning (TSSL)
 
 This repo contains classes and scripts to actively learn Gaussian Processes under safety critical scenario.
-This is attach to paper Global Safe Sequential Learning via Efficient Knowledge Transfer, which will be published on arXiv later.
+This is attach to paper Global Safe Sequential Learning via Efficient Knowledge Transfer ([arXiv](https://arxiv.org/abs/2402.14402)).
 
 Please reach out Cen-You.Li@de.bosch.com for any further information.
 
