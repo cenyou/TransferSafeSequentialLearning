@@ -28,6 +28,7 @@ from tssl.configs.experiment.simulator_configs.single_task_hartmann3_config impo
 from tssl.configs.experiment.simulator_configs.single_task_mogp1dz_config import SingleTaskMOGP1DzBaseConfig
 from tssl.configs.experiment.simulator_configs.single_task_mogp2dz_config import SingleTaskMOGP2DzBaseConfig
 from tssl.configs.experiment.simulator_configs.single_task_engine_interpolated_config import SingleTaskEngineInterpolatedBaseConfig
+from tssl.configs.experiment.simulator_configs.single_task_gengine_config import SingleTaskGEngineConfig, SingleTaskGEngineTestConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_branin_config import TransferTaskBraninBaseConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_multi_sources_branin_config import TransferTaskMultiSourcesBraninBaseConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_hartmann3_config import TransferTaskHartmann3BaseConfig
@@ -35,7 +36,9 @@ from tssl.configs.experiment.simulator_configs.transfer_task_1d_illustrate_confi
 from tssl.configs.experiment.simulator_configs.transfer_task_mogp1dz_config import TransferTaskMOGP1DzBaseConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_mogp2dz_config import TransferTaskMOGP2DzBaseConfig
 from tssl.configs.experiment.simulator_configs.transfer_task_engine_interpolated_config import TransferTaskEngineInterpolatedBaseConfig
+from tssl.configs.experiment.simulator_configs.transfer_task_gengine_config import TransferTaskGEngineConfig, TransferTaskGEngineTestConfig
 
+from tssl.data_sets.gengine import GEngine1, GEngine2
 from tssl.oracles import (
     MOGP1DOracle,
     MOGP2DOracle,
@@ -53,6 +56,7 @@ from tssl.oracles.flexible_example_functions import (
 from tssl.pools import (
     BasePool, BasePoolWithSafety,
     PoolFromOracle, PoolWithSafetyFromOracle,
+    PoolFromDataSet, PoolWithSafetyFromDataSet,
     TransferPoolFromPools, MultitaskPoolFromPools,
     EnginePool, EngineCorrelatedPool
 )
@@ -380,8 +384,62 @@ class SimulatorFactory:
             
             return TransferPoolFromPools(pool_s, pool_t)
 
+        elif isinstance(simulator_config, SingleTaskGEngineConfig):
+            dataset = GEngine2( os.path.join(simulator_config.data_path, 'gengines') )
+            if isinstance(simulator_config, SingleTaskGEngineTestConfig):
+                dataset.load_from_test = True
+            dataset.load_data_set()
+            pool = PoolWithSafetyFromDataSet(
+                dataset,
+                input_idx=[True]*dataset.input_dimension,
+                output_idx=[1],
+                safety_idx=[3],
+                seed=simulator_config.seed,
+                set_seed=True
+            )
+            if simulator_config.n_pool <= pool.possible_queries().shape[0] and simulator_config.n_pool>0:
+                pool.set_data(*pool.get_random_data(simulator_config.n_pool, noisy=True))
+            else:
+                print(f'invalid n_pool {simulator_config.n_pool}, take all data')
+            return pool
+
+        elif isinstance(simulator_config, TransferTaskGEngineConfig):
+            dataset_s = GEngine1( os.path.join(simulator_config.data_path, 'gengines') )
+            if isinstance(simulator_config, TransferTaskGEngineTestConfig):
+                dataset_s.load_from_test = True
+            dataset_s.load_data_set()
+            ###
+            dataset_t = GEngine2( os.path.join(simulator_config.data_path, 'gengines') )
+            if isinstance(simulator_config, TransferTaskGEngineTestConfig):
+                dataset_t.load_from_test = True
+            dataset_t.load_data_set()
+            ###
+            pool_s = PoolWithSafetyFromDataSet(
+                dataset_s,
+                input_idx=[True]*dataset_s.input_dimension,
+                output_idx=[3],
+                safety_idx=[6],
+                seed=simulator_config.seed,
+                set_seed=True
+            )
+            ###
+            pool_t = PoolWithSafetyFromDataSet(
+                dataset_t,
+                input_idx=[True]*dataset_t.input_dimension,
+                output_idx=[1],
+                safety_idx=[3],
+                seed=simulator_config.seed,
+                set_seed=True
+            )
+            
+            if simulator_config.n_pool <= pool_t.possible_queries().shape[0] and simulator_config.n_pool>0:
+                pool_t.set_data(*pool_t.get_random_data(simulator_config.n_pool, noisy=True))
+            else:
+                print(f'invalid n_pool {simulator_config.n_pool}, take all data')
+            return TransferPoolFromPools(pool_s, pool_t)
+
         else:
-            raise NotImplementedError(f"Invalid config: {oracle_config.__class__.__name__}")
+            raise NotImplementedError(f"Invalid config: {simulator_config.__class__.__name__}")
 
 
 if __name__ == "__main__":

@@ -16,14 +16,11 @@
 """
 from typing import Union, Sequence
 import os
-import sys
 import numpy as np
 import pandas as pd
 import time
-from copy import deepcopy
 from tssl.utils.utils import filter_nan
 from scipy.stats import norm
-from tssl.utils.utils import check1Dlist
 from tssl.utils.safety_metrices import SafetyAreaMeasure
 from tssl.enums.data_structure_enums import OutputType
 from tssl.enums.active_learner_enums import ValidationType
@@ -55,8 +52,10 @@ class SafeActiveLearner:
         run_ccl: bool=True,
         tolerance: Union[float, Sequence[float]]=0.01,
         save_results: bool=False,
-        experiment_path: str=None
-        ):
+        experiment_path: str=None,
+        update_gp_hps_every_n_iter: int = 1,
+        max_pool_size: int=None,
+    ):
         self.acquisition_function = acquisition_function
         self.validation_type = validation_type
         self.observation_number = []
@@ -76,6 +75,9 @@ class SafeActiveLearner:
         self.save_results = save_results
         self.exp_path = experiment_path
         self.__save_model_pars = False
+        self._update_gp_hps_in_this_iter = True
+        self._update_gp_hps_every_n_iter = update_gp_hps_every_n_iter
+        self.max_pool_size = max_pool_size
 
     def set_pool(self, pool: Union[BasePool, BasePoolWithSafety]):
         self.pool = pool
@@ -185,6 +187,9 @@ class SafeActiveLearner:
         self._make_infer()
 
         x_pool = self.pool.possible_queries()
+        if not self.max_pool_size is None and self.max_pool_size > 0:
+            mask = np.random.choice(x_pool.shape[0], size=min(self.max_pool_size, x_pool.shape[0]), replace=False)
+            x_pool = x_pool[mask]
         idx_dim = self._return_variable_idx()
 
         acq_score, S = self.acquisition_function.acquisition_score(
@@ -231,7 +236,7 @@ class SafeActiveLearner:
 
                     if self.measure_safe_area:
                         D = self.pool.get_variable_dimension()
-                        print(f'safe region index: {self.safe_area.label_points(np.atleast_2d(query)[:, :D])}')
+                        self.safe_area.label_points(np.atleast_2d(query)[:, :D])
 
                     if self.model_is_safety_model:
                         new_y = self.pool.query(query, noisy=self.query_noisy)
@@ -255,7 +260,8 @@ class SafeActiveLearner:
 
                 self.validate(make_infer=False)
                 true_steps += 1
-            
+                self._update_gp_hps_in_this_iter = (true_steps % self._update_gp_hps_every_n_iter == 0 )
+
             except StopIteration as e:
                 print(f'Finish early: {e}')
                 break
@@ -382,8 +388,30 @@ class SafeActiveLearner:
             else:
                 return dataframe
 
+    def _make_no_train_infer(self):
+        print('    No gp update in this iter')
+        idx_dim = self._return_variable_idx()
+        infer_time = []
+
+        self.model.set_model_data(*filter_nan(self.x_data[..., idx_dim], self.y_data))        
+        infer_time.append(0.0)
+        if not self.model_is_safety_model:
+            for i, model in enumerate(self.safety_models):
+                model.set_model_data(*filter_nan(self.x_data[..., idx_dim], self.z_data[..., i, None]))
+                infer_time.append(0.0)
+
+        self.infer_time.append(tuple(infer_time))
+
+        if self.__save_model_pars:
+            self._track_model_parameters()
+
+        return True
 
     def _make_infer(self):
+        if not self._update_gp_hps_in_this_iter:
+            return self._make_no_train_infer()
+
+        print('    Update GPs')
         self.model.reset_model()
         idx_dim = self._return_variable_idx()
         infer_time = []

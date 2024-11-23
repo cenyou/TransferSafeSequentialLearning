@@ -153,6 +153,14 @@ from tssl.configs.experiment.simulator_configs.transfer_task_engine_interpolated
     TransferTaskEngineInterpolated_HC_Config,
     TransferTaskEngineInterpolated_NOx_Config,
 )
+from tssl.configs.experiment.simulator_configs.single_task_gengine_config import (
+    SingleTaskGEngineConfig,
+    SingleTaskGEngineTestConfig,
+)
+from tssl.configs.experiment.simulator_configs.transfer_task_gengine_config import (
+    TransferTaskGEngineConfig,
+    TransferTaskGEngineTestConfig,
+)
 
 
 class ConfigPicker:
@@ -264,6 +272,10 @@ class ConfigPicker:
             TransferTaskEngineInterpolated_PI0s_Config,
             TransferTaskEngineInterpolated_HC_Config,
             TransferTaskEngineInterpolated_NOx_Config,
+            SingleTaskGEngineConfig,
+            SingleTaskGEngineTestConfig,
+            TransferTaskGEngineConfig,
+            TransferTaskGEngineTestConfig,
         ]
     }
 
