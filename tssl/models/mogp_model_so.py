@@ -111,6 +111,13 @@ class SOMOGPModel(BaseModel):
         """
         self.n_starts_for_multistart_opt = n_starts
 
+    def set_model_data(self, x_data: np.array, y_data: np.array):
+        assert hasattr(self, 'model')
+        assert isinstance(self.model, SOMOGPR)
+        yy = y_data
+        yy = np.hstack((yy[..., :1], x_data[..., -1, None]))
+        self.model.data = gpflow.models.util.data_input_to_tensor((x_data, yy))
+
     def infer(self, x_data: np.array, y_data: np.array):
         """
         Main entrance method for learning the model - training methods are called if hp should be done otherwise only gpflow model is build

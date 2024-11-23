@@ -147,7 +147,21 @@ class MetaGPModel(BaseModel):
             t1 = time.perf_counter()
             self.meta_trained = True
             return t1 - t0
-        
+
+    def set_model_data(self, x_data: np.array, y_data: np.array):
+        """
+        Method to manipulate observations without altering GP object
+
+        Arguments:
+            x_data: Input array with shape (n,d+1) where d is the input dimension and n the number of training points
+            y_data: Label array with shape (n,1) where n is the number of training points
+        """
+        assert hasattr(self, 'model')
+        assert isinstance(self.model, FPACOH_MAP_GP)
+        P = self.kernel.output_dimension
+        mask = (x_data[:,-1] == (P-1))
+        self.data = (x_data[mask], y_data[mask])
+
     def estimate_model_evidence(self, x_data: Optional[np.array] = None, y_data: Optional[np.array] = None) -> float:
         """
         Estimates the model evidence - always retrieves marg likelihood, also when HPs are provided with prior!!

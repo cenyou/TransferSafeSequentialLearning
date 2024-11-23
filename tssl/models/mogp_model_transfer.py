@@ -138,6 +138,15 @@ class TransferGPModel(BaseModel):
         """
         self.n_starts_for_multistart_opt = n_starts
 
+    def set_model_data(self, x_data: np.array, y_data: np.array):
+        assert hasattr(self, 'model')
+        assert isinstance(self.model, TransferGPR)
+        yy = np.hstack((y_data[..., :1], x_data[..., -1, None]))
+        t = self.kernel.output_dimension - 1
+        t_mask = x_data[:,-1] == t
+        self.model.source_data = gpflow.models.util.data_input_to_tensor((x_data[~t_mask], yy[~t_mask]))
+        self.model.data = gpflow.models.util.data_input_to_tensor((x_data[t_mask], yy[t_mask]))
+
     def build_model(self, x_data: np.array, y_data: np.array):
         yy = np.hstack((y_data[..., :1], x_data[..., -1, None]))
         t = self.kernel.output_dimension - 1

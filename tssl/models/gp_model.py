@@ -228,6 +228,18 @@ class GPModel(BaseModel):
                 t1 = time.perf_counter()
                 return t1 - t0
 
+    def set_model_data(self, x_data: np.array, y_data: np.array, class_mask: np.array=None):
+        """
+        Method to manipulate observations without altering GP object
+
+        Arguments:
+            x_data: Input array with shape (n,d) where d is the input dimension and n the number of training points
+            y_data: Label array with shape (n,1) where n is the number of training points
+        """
+        assert hasattr(self, 'model')
+        assert isinstance(self.model, gpflow.models.GPR)
+        self.model.data = gpflow.models.util.data_input_to_tensor((x_data, y_data))
+
     def build_model(self, x_data: np.array, y_data: np.array):
         """
         Method to build to gpflow model object

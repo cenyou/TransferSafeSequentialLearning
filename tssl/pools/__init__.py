@@ -18,6 +18,10 @@ from .base_pool import BasePool
 from .base_pool_with_safety import BasePoolWithSafety
 from .pool_from_oracle import PoolFromOracle
 from .pool_with_safety_from_oracle import PoolWithSafetyFromOracle
+from .pool_from_data import PoolFromData
+from .pool_with_safety_from_data import PoolWithSafetyFromData
+from .pool_from_data_set import PoolFromDataSet
+from .pool_with_safety_from_data_set import PoolWithSafetyFromDataSet
 
 from .transfer_pool_from_pools import TransferPoolFromPools
 from .multitask_pool_from_pools import MultitaskPoolFromPools
@@ -29,6 +33,8 @@ from .engine_pool import EnginePool, EngineCorrelatedPool
 __all__ = [
     "BasePool", "BasePoolWithSafety",
     "PoolFromOracle", "PoolWithSafetyFromOracle",
+    "PoolFromData", "PoolWithSafetyFromData"
+    "PoolFromDataSet", "PoolWithSafetyFromDataSet"
     "TransferPoolFromPools",
     "MultitaskPoolFromPools",
     "EnginePool", "EngineCorrelatedPool"
