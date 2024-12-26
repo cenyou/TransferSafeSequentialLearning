@@ -1,9 +1,8 @@
 # Transfer Safe Sequential Learning (TSSL)
 
 This repo contains classes and scripts to actively learn Gaussian Processes under safety critical scenario.
-This is attach to paper Global Safe Sequential Learning via Efficient Knowledge Transfer ([arXiv](https://arxiv.org/abs/2402.14402)).
-
-Please reach out Cen-You.Li@de.bosch.com for any further information.
+This is attached to the paper
+**Global Safe Sequential Learning via Efficient Knowledge Transfer** published in Transactions on Machine Learning Research (Links: [TMLR](https://openreview.net/forum?id=PtD2gVmb3J), [arXiv](https://arxiv.org/abs/2402.14402)).
 
 # Setup
 We use conda to manage our environment ([see here for conda environment management](https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html)).
@@ -34,7 +33,7 @@ In the following, we describe how to reproduce the experiments in our paper.
 
 ## Simulated datasets
 We first generate the synthetic data, and then run experiments on the generated data.
-### Generate datasets:
+### Simulated datasets - Generate datasets:
 
 ```bash
 python ./tssl/experiments/simulator/data_generator_safe_mogp.py --folder YOUR_DATA_PATH --dim 1
@@ -47,7 +46,7 @@ python ./tssl/experiments/simulator/data_generator_safe_multi_sources_branin.py 
 Now GP1D, GP2D, Branin, Hartmann3 and multi sources Branin data are generated.
 
 With multi sources Branin, specify the max number of source tasks you want with `--num_sources`.
-### Run SAL
+### Simulated datasets - Run SAL
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_al_from_simulator.py \
  --experiment_data_dir YOUR_DATA_PATH \
@@ -67,7 +66,7 @@ For **Branin** data: use ` --simulator_config SingleTaskBranin[0-4]Config`.
 
 For **Hartmann3** data: use ` --simulator_config SingleTaskHartmann3_[0-4]Config`.
 
-### Run EffTrans
+### Simulated datasets - Run EffTrans
 
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py \
@@ -98,22 +97,22 @@ python ./tssl/experiments/safe_learning/main_multi_sources_safe_transfer_al_from
  --kernel_config BasicMIAdditiveConfig --model_config BasicTransferGPModelConfig --acquisition_function_config BasicSafePredEntropyAllConfig --label_safeland True --safe_lower_source 0 --safe_upper_source inf --safe_lower 0 --safe_upper inf --n_data_s_per_dim 20 --dim_s 3 --n_data_initial 20 --n_steps 100 --n_data_test 500 --query_noisy True
 ```
 
-### Run FullTransHGP:
+### Simulated datasets - Run FullTransHGP:
 replace `--model_config BasicTransferGPModelConfig` by `--model_config BasicSOMOGPModelConfig`, the remaining arguments are the same as `EffTrans`
 
-### Run FullTransLMC:
+### Simulated datasets - Run FullTransLMC:
 replace `--kernel_config BasicMIAdditiveConfig --model_config BasicTransferGPModelConfig` by `--kernel_config BasicCoregionalizationPLConfig --model_config BasicSOMOGPModelConfig`, the remaining arguments are the same as `EffTrans`
 
-### Run Rothfuss et al. 2022
+### Simulated datasets - Run Rothfuss et al. 2022
 replace `--kernel_config BasicMIAdditiveConfig --model_config BasicTransferGPModelConfig` by `--kernel_config BasicFPACOHKernelConfig --model_config BasicMetaGPModelConfig`, the remaining arguments are the same as `EffTrans`
 
 
-## engine datasets
+## PEngine datasets
 The datasets are published on github ([link](https://github.com/boschresearch/Bosch-Engine-Datasets/tree/master/pengines)).
 
 First move all the excel files into path ```YOUR_DATA_PATH/engine```
 
-### Run SAL
+### PEngine datasets - Run SAL
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_al_from_simulator.py \
  --experiment_data_dir YOUR_DATA_PATH \
@@ -125,7 +124,7 @@ python ./tssl/experiments/safe_learning/main_safe_al_from_simulator.py \
 `--experiment_idx` is the seed, we use [1-5].
 `--simulator_config SingleTaskEngineInterpolated_TEx_Config` can also be used (supplementary experiment).
 
-### Run EffTrans
+### PEngine datasets - Run EffTrans
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py \
  --experiment_data_dir YOUR_DATA_PATH \
@@ -137,7 +136,7 @@ python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py 
 `--experiment_idx` is the seed, we use [1-5].
 `--simulator_config TransferTaskEngineInterpolated_TEx_Config` can also be used (supplementary experiment).
 
-### Run FullTransHGP
+### PEngine datasets - Run FullTransHGP
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py \
  --experiment_data_dir YOUR_DATA_PATH \
@@ -149,7 +148,7 @@ python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py 
 `--experiment_idx` is the seed, we use [1-5].
 `--simulator_config TransferTaskEngineInterpolated_TEx_Config` can also be used (supplementary experiment).
 
-### Run FullTransLMC
+### PEngine datasets - Run FullTransLMC
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py \
  --experiment_data_dir YOUR_DATA_PATH \
@@ -161,7 +160,7 @@ python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py 
 `--experiment_idx` is the seed, we use [1-5].
 `--simulator_config TransferTaskEngineInterpolated_TEx_Config` can also be used (supplementary experiment).
 
-### Run Rothfuss et al. 2022
+### PEngine datasets - Run Rothfuss et al. 2022
 ```bash
 python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py \
  --experiment_data_dir YOUR_DATA_PATH \
@@ -172,3 +171,49 @@ python ./tssl/experiments/safe_learning/main_safe_transfer_al_from_simulator.py 
 ```
 `--experiment_idx` is the seed, we use [1-5].
 `--simulator_config TransferTaskEngineInterpolated_TEx_Config` can also be used (supplementary experiment).
+
+
+## GEngine datasets
+The datasets are published on github ([link](https://github.com/boschresearch/Bosch-Engine-Datasets)).
+
+There are two subfolders ```gengine1```, ```gengine2```.
+
+Move ```gengine1/*``` into path ```YOUR_DATA_PATH/gengines/gengine1/*```, and ```gengine2/*``` into path ```YOUR_DATA_PATH/gengines/gengine2/*```.
+
+The data need to be processed. Run
+```bash
+python ./tssl/experiments/safe_learning/gengine_process.py --experiment_data_dir YOUR_DATA_PATH/gengines
+```
+
+Then we are prepared to run the experiments.
+
+### GEngine datasets - Run SAL
+```bash
+python ./tssl/experiments/safe_learning/main_safe_al_gengine.py --experiment_data_dir YOUR_DATA_PATH --experiment_output_dir YOUR_RESULT_PATH --experiment_idx 1
+```
+`--experiment_idx` is the seed, we use [1-5].
+
+
+### GEngine datasets - Run EffTrans
+```bash
+python ./tssl/experiments/safe_learning/main_safe_transfer_al_gengine.py --experiment_data_dir YOUR_DATA_PATH --experiment_output_dir YOUR_RESULT_PATH --experiment_idx 1 --kernel_config BasicMIAdditiveConfig --model_config BasicTransferGPModelConfig
+```
+`--experiment_idx` is the seed, we use [1-5].
+
+### GEngine datasets - Run FullTransHGP
+```bash
+python ./tssl/experiments/safe_learning/main_safe_transfer_al_gengine.py --experiment_data_dir YOUR_DATA_PATH --experiment_output_dir YOUR_RESULT_PATH --experiment_idx 1 --kernel_config BasicMIAdditiveConfig --model_config BasicSOMOGPModelConfig
+```
+`--experiment_idx` is the seed, we use [1-5].
+
+### GEngine datasets - Run FullTransLMC
+```bash
+python ./tssl/experiments/safe_learning/main_safe_transfer_al_gengine.py --experiment_data_dir YOUR_DATA_PATH --experiment_output_dir YOUR_RESULT_PATH --experiment_idx 1 --kernel_config BasicCoregionalizationPLConfig --model_config BasicSOMOGPModelConfig
+```
+`--experiment_idx` is the seed, we use [1-5].
+
+### GEngine datasets - Run Rothfuss et al. 2022
+```bash
+python ./tssl/experiments/safe_learning/main_safe_transfer_al_gengine.py --experiment_data_dir YOUR_DATA_PATH --experiment_output_dir YOUR_RESULT_PATH --experiment_idx 1 --kernel_config BasicFPACOHKernelConfig --model_config BasicMetaGPModelConfig
+```
+`--experiment_idx` is the seed, we use [1-5].
